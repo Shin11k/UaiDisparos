@@ -202,6 +202,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Uma ou mais conexões não pertencem a esta operação." }, { status: 400 });
     }
 
+    const selectedPhones = new Map<string, string>();
+    for (const sender of senders) {
+      const phone = normalizeGroupAdditionPhone(sender.phone);
+      if (!phone) {
+        return NextResponse.json(
+          { ok: false, error: "Todas as conexões escolhidas precisam ter um número identificado." },
+          { status: 400 },
+        );
+      }
+      const previous = selectedPhones.get(phone);
+      if (previous && previous !== sender.id) {
+        return NextResponse.json(
+          { ok: false, error: "Você selecionou duas conexões do mesmo número. Escolha apenas uma conexão por número." },
+          { status: 400 },
+        );
+      }
+      selectedPhones.set(phone, sender.id);
+    }
+
     const validation: Array<{ id: string; name: string; phone: string | null; ok: boolean; reason: string }> = [];
     for (const sender of senders as GroupAdditionInstance[]) {
       const result = await validateInstanceGroupAdmin(sender, group.external_id);
