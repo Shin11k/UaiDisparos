@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: claimed, error: claimError } = await supabase.rpc("claim_group_addition_jobs", { p_limit: 8 });
+  const { data: claimed, error: claimError } = await supabase.rpc("claim_group_addition_jobs", { p_limit: 1 });
   if (claimError) {
     return new Response(JSON.stringify({ ok: false, error: claimError.message }), { status: 500, headers });
   }
