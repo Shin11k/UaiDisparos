@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const { accountId } = getTenantContext();
     const body = await req.json().catch(() => ({}));
     const groupId = String(body?.group_id || "");
-    const senderIds = Array.from(new Set(
+    const senderIds: string[] = Array.from(new Set<string>(
       Array.isArray(body?.sender_instance_ids)
         ? body.sender_instance_ids.map((value: unknown) => String(value || "")).filter(Boolean)
         : [],
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     if (!group) return NextResponse.json({ ok: false, error: "Grupo não encontrado." }, { status: 404 });
     if (sendersError) throw sendersError;
 
-    const validation = [];
+    const validation: Array<{ id: string; name: string; phone: string | null; ok: boolean; reason: string }> = [];
     for (const sender of (senders || []) as GroupAdditionInstance[]) {
       const result = await validateInstanceGroupAdmin(sender, group.external_id);
       validation.push({
