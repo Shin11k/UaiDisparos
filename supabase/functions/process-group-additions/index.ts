@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
           .select("id,status,authorization_confirmed,group_external_id,daily_limit_per_sender,work_start_hour")
           .eq("id", job.campaign_id).single(),
         supabase.from("instances")
-          .select("id,name,status,base_url,api_token")
+          .select("id,account_id,name,status,base_url,api_token,phone")
           .eq("id", job.instance_id).single(),
       ]);
 
@@ -79,9 +79,23 @@ Deno.serve(async (req) => {
       }
 
       const bounds = saoPauloDayBounds();
+      let sameNumberInstanceIds = [job.instance_id];
+
+      if (instance.phone) {
+        const { data: sameNumberInstances } = await supabase
+          .from("instances")
+          .select("id")
+          .eq("account_id", job.account_id)
+          .eq("phone", instance.phone);
+
+        if (sameNumberInstances?.length) {
+          sameNumberInstanceIds = sameNumberInstances.map((item: any) => item.id);
+        }
+      }
+
       const { count: usedToday } = await supabase.from("group_addition_jobs")
         .select("id", { count: "exact", head: true })
-        .eq("instance_id", job.instance_id)
+        .in("instance_id", sameNumberInstanceIds)
         .eq("status", "added")
         .gte("processed_at", bounds.start)
         .lt("processed_at", bounds.end);
