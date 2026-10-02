@@ -46,7 +46,7 @@ function nextLocalDateKey(dateKey: string) {
 }
 
 function ensureWorkWindow(date: Date, startHour: number, endHour: number) {
-  let current = new Date(date);
+  let current = new Date(date.getTime());
   const key = localDateKey(current);
   const hour = localHour(current);
 
