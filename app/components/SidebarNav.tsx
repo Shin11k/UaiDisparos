@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Bell, KeyRound, LayoutDashboard, Megaphone, MessageCircle, Send, Smartphone, UserRound, Users } from "lucide-react";
+import { Activity, Bell, KeyRound, LayoutDashboard, Megaphone, MessageCircle, Send, Smartphone, UserPlus, UserRound, Users } from "lucide-react";
 
 type PermissionKey =
   | "overview" | "instances" | "groups" | "leads" | "campaigns"
@@ -17,6 +17,7 @@ const nav:[string,string,any,PermissionKey][] = [
   ["/campanhas","Campanhas",Megaphone,"campaigns"],
   ["/disparos","Disparo em grupo",Send,"group_broadcast"],
   ["/disparos/privado","Disparo privado",MessageCircle,"private_broadcast"],
+  ["/disparos/adicionar-grupos","Add em grupos",UserPlus,"group_broadcast"],
   ["/operacoes","Operações",Activity,"operations"],
   ["/notificacoes","Notificações",Bell,"notifications"],
 ];
@@ -60,7 +61,11 @@ export default function SidebarNav(){
   return (
     <nav className="nav">
       {visibleNav.map(([href,label,Icon]) => {
-        const active = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+        const active = href === "/"
+          ? pathname === "/"
+          : href === "/disparos"
+            ? pathname === "/disparos"
+            : pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link key={href} href={href} className={active ? "active" : ""}>
             <span className="nav-icon"><Icon size={17} strokeWidth={1.8}/></span>
