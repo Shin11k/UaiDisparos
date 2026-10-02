@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
 
     const name = String(body?.name || "Adicionar em grupo").trim().slice(0, 100);
     const groupId = String(body?.group_id || "");
-    const senderIds = Array.from(new Set(
+    const senderIds: string[] = Array.from(new Set<string>(
       Array.isArray(body?.sender_instance_ids)
         ? body.sender_instance_ids.map((value: unknown) => String(value || "")).filter(Boolean)
         : [],
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Uma ou mais conexões não pertencem a esta operação." }, { status: 400 });
     }
 
-    const validation = [];
+    const validation: Array<{ id: string; name: string; phone: string | null; ok: boolean; reason: string }> = [];
     for (const sender of senders as GroupAdditionInstance[]) {
       const result = await validateInstanceGroupAdmin(sender, group.external_id);
       validation.push({ id: sender.id, name: sender.name, phone: sender.phone, ...result });
