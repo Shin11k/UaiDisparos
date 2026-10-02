@@ -154,7 +154,12 @@ export default function GroupAdditionManager({
     [initialGroups, groupId],
   );
 
-  const dailyCapacity = senderIds.length * dailyLimit;
+  const uniqueSelectedNumbers = new Set(
+    initialInstances
+      .filter((instance) => senderIds.includes(instance.id))
+      .map((instance) => instance.phone || instance.id),
+  ).size;
+  const dailyCapacity = uniqueSelectedNumbers * dailyLimit;
   const roughDays = dailyCapacity > 0 ? Math.ceil(leads.length / dailyCapacity) : 0;
   const todayRough = Math.min(leads.length, dailyCapacity);
 
