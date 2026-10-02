@@ -49,6 +49,7 @@ const permissionLandingOrder: [PermissionKey, string][] = [
 
 function permissionForPath(pathname: string): PermissionKey | "admin" | null {
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) return "admin";
+  if (pathname.startsWith("/disparos/adicionar-grupos") || pathname.startsWith("/api/group-additions")) return "group_broadcast";
   if (pathname.startsWith("/disparos/privado") || pathname.startsWith("/api/private-broadcasts")) return "private_broadcast";
   if (pathname === "/disparos" || pathname.startsWith("/api/automations")) return "group_broadcast";
   if (pathname.startsWith("/instancias") || pathname.startsWith("/api/uazapi/instances") || pathname.startsWith("/api/uazapi/check-instance-statuses")) return "instances";
