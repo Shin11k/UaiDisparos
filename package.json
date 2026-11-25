@@ -18,7 +18,8 @@
     "next": "14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "bcryptjs": "^3.0.2"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "1.14.7",
