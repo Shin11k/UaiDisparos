@@ -2,13 +2,12 @@
 
 import { LogOut } from "lucide-react";
 import { useState } from "react";
-import { getSupabaseBrowser } from "@/lib/supabase/browser";
 
 export default function LogoutButton() {
   const [busy, setBusy] = useState(false);
   async function logout() {
     setBusy(true);
-    try { await getSupabaseBrowser().auth.signOut(); }
+    try { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); }
     finally { window.location.href = "/login"; }
   }
   return (
