@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
-import { withPostgresTransaction } from "@/lib/postgres/server";
+import { queryPostgres } from "@/lib/postgres/server";
 
 type PermissionSet = Record<string,boolean>;
 
@@ -19,22 +19,24 @@ export async function createCustomerAccount(params: {
 }) {
   const email=normalizeEmail(params.email);
   const hash=await hashPassword(params.password);
-  return withPostgresTransaction(async client=>{
-    const accountId=randomUUID(), userId=randomUUID();
-    await client.query(
-      "INSERT INTO public.accounts(id,name,status,is_primary,instance_limit,permissions) VALUES ($1,$2,'active',false,$3,$4::jsonb)",
-      [accountId,params.name,params.instanceLimit,JSON.stringify(params.permissions)],
-    );
-    await client.query(
-      "INSERT INTO public.local_users(id,account_id,email,password_hash,role) VALUES($1,$2,$3,$4,'client')",
-      [userId,accountId,email,hash],
-    );
-    await client.query(
-      "INSERT INTO public.profiles(user_id,account_id,name,email,role,permissions) VALUES($1,$2,$3,$4,'client',NULL)",
-      [userId,accountId,params.name,email],
-    );
-    return {accountId,userId};
-  });
+  const accountId=randomUUID(), userId=randomUUID();
+  // Data-modifying CTEs make all three inserts atomic in one SQL statement.
+  const result=await queryPostgres(
+    `WITH account_row AS (
+       INSERT INTO public.accounts(id,name,status,is_primary,instance_limit,permissions)
+       VALUES($1,$2,'active',false,$3,$4::jsonb) RETURNING id
+     ), user_row AS (
+       INSERT INTO public.local_users(id,account_id,email,password_hash,role)
+       SELECT $5,a.id,$6,$7,'client' FROM account_row a
+       RETURNING id,account_id
+     )
+     INSERT INTO public.profiles(user_id,account_id,name,email,role,permissions)
+     SELECT u.id,u.account_id,$2,$6,'client',NULL FROM user_row u
+     RETURNING user_id`,
+    [accountId,params.name,params.instanceLimit,JSON.stringify(params.permissions),userId,email,hash],
+  );
+  if(result.rowCount !== 1) throw new Error("Falha ao criar conta.");
+  return {accountId,userId};
 }
 
 export async function createCollaborator(params:{
@@ -42,29 +44,28 @@ export async function createCollaborator(params:{
 }) {
   const email=normalizeEmail(params.email);
   const hash=await hashPassword(params.password);
-  return withPostgresTransaction(async client=>{
-    const found=await client.query("SELECT id FROM public.accounts WHERE id=$1 AND status='active'",[params.accountId]);
-    if(!found.rows.length) throw new Error("Conta inválida ou suspensa.");
-    const userId=randomUUID();
-    await client.query(
-      "INSERT INTO public.local_users(id,account_id,email,password_hash,role) VALUES($1,$2,$3,$4,'client')",
-      [userId,params.accountId,email,hash],
-    );
-    await client.query(
-      "INSERT INTO public.profiles(user_id,account_id,name,email,role,permissions) VALUES($1,$2,$3,$4,'client',$5::jsonb)",
-      [userId,params.accountId,params.name,email,JSON.stringify(params.permissions)],
-    );
-    return {userId};
-  });
+  const userId=randomUUID();
+  const result=await queryPostgres(
+    `WITH user_row AS (
+       INSERT INTO public.local_users(id,account_id,email,password_hash,role)
+       SELECT $1,a.id,$3,$4,'client' FROM public.accounts a
+       WHERE a.id=$2 AND a.status='active'
+       RETURNING id,account_id
+     )
+     INSERT INTO public.profiles(user_id,account_id,name,email,role,permissions)
+     SELECT u.id,u.account_id,$5,$3,'client',$6::jsonb FROM user_row u
+     RETURNING user_id`,
+    [userId,params.accountId,email,hash,params.name,JSON.stringify(params.permissions)],
+  );
+  if(result.rowCount !== 1) throw new Error("Conta inválida ou suspensa.");
+  return {userId};
 }
 
 export async function removeCollaborator(userId:string) {
-  return withPostgresTransaction(async client=>{
-    const result=await client.query(
-      "DELETE FROM public.local_users WHERE id=$1 AND role <> 'super_admin' RETURNING id",
-      [userId],
-    );
-    if(!result.rowCount) throw new Error("Colaborador não encontrado ou protegido.");
-    return result.rows[0].id as string;
-  });
+  const result=await queryPostgres(
+    "DELETE FROM public.local_users WHERE id=$1 AND role <> 'super_admin' RETURNING id",
+    [userId],
+  );
+  if(!result.rowCount) throw new Error("Colaborador não encontrado ou protegido.");
+  return result.rows[0].id as string;
 }
