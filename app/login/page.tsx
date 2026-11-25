@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { getSupabaseBrowser } from "@/lib/supabase/browser";
 
 const panel: React.CSSProperties = {
   width: "min(440px, calc(100vw - 32px))",
@@ -25,15 +24,24 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   async function submit(event: FormEvent) {
+    event.prevent  async function submit(event: FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setBusy(true); setError("");
-    const { error: authError } = await getSupabaseBrowser().auth.signInWithPassword({ email, password });
-    if (authError) {
-      setError(authError.message === "Invalid login credentials" ? "E-mail ou senha inválidos." : authError.message);
-      setBusy(false); return;
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ email, password }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) throw new Error(body.error || "Falha ao entrar.");
+      const next = new URLSearchParams(window.location.search).get("next");
+      window.location.href = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Falha ao entrar.");
+      setBusy(false);
     }
-    const next = new URLSearchParams(window.location.search).get("next");
-    window.location.href = next || "/";
   }
 
   return (
