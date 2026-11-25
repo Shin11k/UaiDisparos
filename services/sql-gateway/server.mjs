@@ -91,8 +91,8 @@ const server = http.createServer(async (request, response) => {
       const statement = payload?.sql;
       const values = payload?.values ?? [];
       if (typeof statement !== "string" || statement.length > 100_000 ||
-          !/^(SELECT|WITH|INSERT|UPDATE|DELETE)\\s/i.test(statement.trim()) ||
-          statement.includes(";") || statement.includes("\\0") ||
+          !/^(SELECT|WITH|INSERT|UPDATE|DELETE)\s/i.test(statement.trim()) ||
+          statement.includes(";") || statement.includes("\x00") ||
           !Array.isArray(values) || values.length > 5000) {
         return sendJson(response, 400, { ok: false, error: "Consulta inválida." });
       }
