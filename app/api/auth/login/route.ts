@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ ok: false, error: "E-mail ou senha inválidos." }, { status: 401 });
     }
-    const { token, expiresAt } = await createSession(user.user_id);
+    const { token, expiresAt } = await createSession(user);
     const response = NextResponse.json({ ok: true, user: { name: user.name, role: user.role } });
     response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true, sameSite: "lax", secure: request.nextUrl.protocol === "https:",
