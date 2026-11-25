@@ -2,6 +2,6 @@
 // Uses PostgreSQL Hyperdrive; never bypass this elevated client in user routes.
 import { getPostgresAdminClient } from "@/lib/postgres/compat";
 
-export function getSupabaseAdmin(): any {
+export function getSupabaseAdmin() {
   return getPostgresAdminClient();
 }
