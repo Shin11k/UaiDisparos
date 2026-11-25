@@ -24,7 +24,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   async function submit(event: FormEvent) {
-    event.prevent  async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
     setBusy(true); setError("");
