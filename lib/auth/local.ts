@@ -1,9 +1,10 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
+import { signSession } from "./token";
 import bcrypt from "bcryptjs";
 import { queryPostgres } from "@/lib/postgres/server";
 
 export const SESSION_COOKIE = "uai_session";
-const SESSION_DAYS = 7;
+
 
 export type LocalIdentity = {
   user_id: string;
@@ -45,12 +46,19 @@ export async function authenticatePassword(email: string, password: string): Pro
   return identity;
 }
 
-export async function createSession(userId: string) {
-  const token = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400_000);
+export async function createSession(user: LocalIdentity) {
+  const {token,expiresAt} = await signSession({
+    userId: user.user_id,
+    accountId: user.account_id,
+    role: user.role,
+    accountStatus: user.account_status,
+    permissions: user.role === "super_admin"
+      ? user.account_permissions
+      : (user.permissions ?? user.account_permissions),
+  });
   await queryPostgres(
     "INSERT INTO public.local_sessions (token_hash,user_id,expires_at) VALUES ($1,$2,$3)",
-    [hashToken(token), userId, expiresAt],
+    [hashToken(token), user.user_id, expiresAt],
   );
   return { token, expiresAt };
 }
