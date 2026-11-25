@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { getSupabaseSession } from "@/lib/supabase/session";
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 import { getTenantContext, requireSuperAdmin, type PermissionKey } from "@/lib/tenant";
+import { createCollaborator } from "@/lib/auth/users";
 
 export const dynamic = "force-dynamic";
 
@@ -99,59 +98,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Operação não encontrada." }, { status: 404 });
     }
 
-    const signupClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
-
-    const { data: created, error: createError } = await signupClient.auth.signUp({
-      email,
-      password,
-      options: { data: { name } },
-    });
-
-    if (createError || !created.user) {
-      throw createError || new Error("Não foi possível criar o acesso.");
-    }
-
-    const { data: generatedProfile, error: profileError } = await supabase
-      .from("profiles")
-      .select("user_id,account_id,role")
-      .eq("user_id", created.user.id)
-      .single();
-
-    if (profileError) throw profileError;
-
-    const temporaryAccountId = generatedProfile.account_id;
-
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({
-        account_id: accountId,
-        name,
-        email,
-        role: "client",
-        permissions,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", created.user.id);
-
-    if (updateError) throw updateError;
-
-    if (temporaryAccountId && temporaryAccountId !== accountId) {
-      const { data: temporaryAccount } = await supabase
-        .from("accounts")
-        .select("id,is_primary")
-        .eq("id", temporaryAccountId)
-        .maybeSingle();
-
-      if (temporaryAccount && !temporaryAccount.is_primary) {
-        await supabase.from("accounts").delete().eq("id", temporaryAccountId);
-      }
-    }
+    await createCollaborator({ accountId, name, email, password, permissions });
 
     return NextResponse.json({ ok: true, ...(await snapshot(accountId)) });
   } catch (error) {
