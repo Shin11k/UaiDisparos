@@ -75,6 +75,39 @@ const server = http.createServer(async (request, response) => {
     }
     return;
   }
+  if (request.method === "POST" && request.url === "/sql") {
+    try {
+      let size = 0;
+      const chunks = [];
+      for await (const chunk of request) {
+        size += chunk.length;
+        if (size > 512_000) {
+          sendJson(response, 413, { ok: false, error: "Consulta muito grande." });
+          request.destroy(); return;
+        }
+        chunks.push(chunk);
+      }
+      const payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      const statement = payload?.sql;
+      const values = payload?.values ?? [];
+      if (typeof statement !== "string" || statement.length > 100_000 ||
+          !/^(SELECT|WITH|INSERT|UPDATE|DELETE)\\s/i.test(statement.trim()) ||
+          statement.includes(";") || statement.includes("\\0") ||
+          !Array.isArray(values) || values.length > 5000) {
+        return sendJson(response, 400, { ok: false, error: "Consulta inválida." });
+      }
+      const result = await pool.query(statement, values);
+      return sendJson(response, 200, {
+        ok: true, rows: result.rows, rowCount: result.rowCount ?? 0,
+      });
+    } catch (error) {
+      // Never log query values or database credentials.
+      const code = typeof error?.code === "string" ? error.code : undefined;
+      return sendJson(response, 500, {
+        ok: false, code, error: error instanceof Error ? error.message : "Falha SQL.",
+      });
+    }
+  }
   sendJson(response, 404, { ok: false, error: "Rota não encontrada." });
 });
 
