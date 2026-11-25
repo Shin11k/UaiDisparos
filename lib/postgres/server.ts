@@ -1,8 +1,10 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { Client, type QueryResultRow } from "pg";
+import { Client, type QueryResultRow, type QueryResult } from "pg";
 
 type CloudflareDatabaseEnv = {
   HYPERDRIVE?: { connectionString: string };
+  UAI_SQL_GATEWAY?: { fetch(input: string, init?: RequestInit): Promise<Response> };
+  UAI_GATEWAY_TOKEN?: string;
 };
 
 /**
@@ -32,6 +34,27 @@ export async function queryPostgres<T extends QueryResultRow = QueryResultRow>(
   statement: string,
   values: readonly unknown[] = [],
 ) {
+  // Preferred path for a Windows PostgreSQL server with SSL disabled:
+  // Worker -> Workers VPC (encrypted tunnel) -> localhost-only HTTP gateway -> PostgreSQL.
+  // The PostgreSQL password never leaves the Windows server.
+  let remote: CloudflareDatabaseEnv | null = null;
+  try { remote = getCloudflareContext().env as CloudflareDatabaseEnv; } catch {}
+  if (remote?.UAI_SQL_GATEWAY) {
+    const token = remote.UAI_GATEWAY_TOKEN;
+    if (!token || token.length < 32) throw new Error("Segredo do gateway UAI não configurado.");
+    const response = await remote.UAI_SQL_GATEWAY.fetch("http://127.0.0.1:3107/sql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ sql: statement, values }),
+    });
+    const body = await response.json() as { ok?: boolean; rows?: T[]; rowCount?: number; error?: string; code?: string };
+    if (!response.ok || !body.ok) {
+      const error = new Error(body.error || "Gateway PostgreSQL indisponível.") as Error & { code?: string };
+      error.code = body.code;
+      throw error;
+    }
+    return { rows: body.rows || [], rowCount: body.rowCount ?? 0 } as QueryResult<T>;
+  }
   const client = new Client({
     connectionString: getDatabaseUrl(),
     connectionTimeoutMillis: 8_000,
