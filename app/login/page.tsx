@@ -62,7 +62,7 @@ export default function LoginPage() {
           {busy ? "Entrando..." : "Entrar"}
         </button>
         <p style={{ textAlign: "center", color: "rgba(255,255,255,.58)", fontSize: 13, marginTop: 20 }}>
-          Ainda não tem conta? <Link href="/cadastro" style={{ color: "#e7b34e", fontWeight: 800 }}>Criar cadastro</Link>
+          Precisa de acesso? <Link href="/cadastro" style={{ color: "#e7b34e", fontWeight: 800 }}>Solicitar ao administrador</Link>
         </p>
       </form>
     </div>
