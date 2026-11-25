@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.accounts (
 CREATE UNIQUE INDEX IF NOT EXISTS uai_one_primary_account ON public.accounts (is_primary) WHERE is_primary;
 
 INSERT INTO public.accounts(name, is_primary, instance_limit)
-SELECT 'UAI Disparos - operação principal', true, 100
+SELECT 'UAI Disparos - operação principal', true, 10
 WHERE NOT EXISTS (SELECT 1 FROM public.accounts WHERE is_primary);
 
 CREATE TABLE IF NOT EXISTS public.local_users (
