@@ -9,9 +9,7 @@ Status: **preparação isolada**, branch `migration/postgres-local`. NÃO é pro
 - Não abrir a porta 5432 do PostgreSQL na internet.
 
 ## Bloqueios reais antes do corte
-1. **Backup original do Supabase** ainda não foi fornecido. Sem ele não existem dados para restaurar.
-   O SQL publicado em `supabase/schema.sql` é anterior às tabelas e triggers de multitenancy:
-   não o trate como substituto de um backup da produção.
+1. **Backup de 29/09/2026 recebido e inspecionado**: dump de CLUSTER com 51 tabelas (incluindo schemas do Supabase), 13 tabelas operacionais `public`, 1 usuário em `auth.users` e 5.660 eventos de webhook. **Não inclui** `public.accounts` ou `public.profiles` adicionadas depois. Não restaura o estado atual de produção. Foi preparado um pacote PRIVADO para restauração isolada da camada `public`, disponível somente como anexo na conversa original; não publicar seus dados no GitHub. O SQL publicado em `supabase/schema.sql` também é anterior ao multitenancy.
 2. **Servidor local** ainda não está acessível por esta sessão. Precisamos verificar serviço PostgreSQL,
    porta, versão, usuário de banco específico, ambiente Node e conexão segura à Cloudflare.
 3. **Autenticação:** o código usa `@supabase/ssr` e `auth.signInWithPassword()`, além de
@@ -49,7 +47,7 @@ Apenas o gateway usa `PGPASSWORD`. Nunca coloque dados de acesso ao PostgreSQL n
 ou nos arquivos versionados do repositório.
 
 ## Etapas de migração depois de receber o backup
-1. Inspecionar backup e dependências (sem restaurar por cima de outro banco).
+1. Usar o backup de 29/09 somente no banco isolado `uaidisparos`; verificar se há backup mais recente para migrar `accounts`/`profiles`.
 2. Criar database limpo e contas limitadas de aplicação.
 3. Restaurar as tabelas de negócio, vínculos e dados. Migrar funções Supabase-específicas.
 4. Substituir Auth por autenticação própria, segura e com troca/redefinição de senha se necessário.
