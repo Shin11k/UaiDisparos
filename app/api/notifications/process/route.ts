@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorizedQueueRequest } from "@/lib/auth/queue";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +54,8 @@ async function sendWebhook(url: string, body: Record<string, unknown>) {
   return { ok: false, status: response.status, error: text.slice(0, 500) };
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!authorizedQueueRequest(request)) return NextResponse.json({ ok: false, error: "Não autorizado." }, { status: 401 });
   try {
     const supabase = getSupabaseAdmin();
     const [{ data: settings }, { data: events, error }] = await Promise.all([
