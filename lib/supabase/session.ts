@@ -2,6 +2,6 @@
 // through Cloudflare Hyperdrive. Remove this file after callers migrate imports.
 import { getPostgresSessionClient } from "@/lib/postgres/compat";
 
-export function getSupabaseSession(): any {
+export function getSupabaseSession() {
   return getPostgresSessionClient();
 }
