@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { getSupabaseSession } from "@/lib/supabase/session";
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 import { requireSuperAdmin, type PermissionKey } from "@/lib/tenant";
+import { createCustomerAccount } from "@/lib/auth/users";
 
 export const dynamic = "force-dynamic";
 
@@ -102,35 +101,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: `O limite ultrapassa a capacidade global. Restam ${Math.max(0, capacity - allocated)} instâncias para distribuir.` }, { status: 400 });
     }
 
-    // Cria o usuário com um cliente Auth isolado. Assim o painel administrativo
-    // não depende da service role e a sessão do super-admin nunca é substituída.
-    const signupClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
+    await createCustomerAccount({
+      name, email, password, instanceLimit, permissions,
     });
-
-    const { data: created, error: createError } = await signupClient.auth.signUp({
-      email,
-      password,
-      options: { data: { name } },
-    });
-    if (createError || !created.user) throw createError || new Error("Não foi possível criar o usuário.");
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("account_id")
-      .eq("user_id", created.user.id)
-      .single();
-    if (profileError) throw profileError;
-    if (!profile?.account_id) throw new Error("Perfil do cliente não foi criado.");
-
-    const { error: accountError } = await supabase.from("accounts").update({
-      name, instance_limit: instanceLimit, permissions, updated_at: new Date().toISOString(),
-    }).eq("id", profile.account_id);
-    if (accountError) throw accountError;
 
     return NextResponse.json({ ok: true, ...(await dashboard()) });
   } catch (error) {
