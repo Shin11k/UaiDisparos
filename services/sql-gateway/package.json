@@ -1,0 +1,16 @@
+{
+  "name": "uai-postgres-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.mjs",
+    "check": "node --check server.mjs"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "dependencies": {
+    "pg": "8.16.3"
+  }
+}
