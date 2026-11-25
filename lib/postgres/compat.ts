@@ -4,7 +4,7 @@ import { queryPostgres } from "./server";
 type SqlFilter = { sql: string; values: unknown[] };
 type Row = Record<string, unknown>;
 type Operation = "select" | "insert" | "update" | "delete" | "upsert";
-type SqlResult = { data: any; error: { code?: string; message: string } | null; count: number | null };
+type SqlResult = { data: any[] | null; error: { code?: string; message: string } | null; count: number | null };
 
 const TABLES = new Set([
   "accounts", "profiles", "system_settings", "local_users", "local_sessions",
@@ -151,8 +151,8 @@ export class PgQueryBuilder implements PromiseLike<SqlResult> {
     this.limitValue = Math.max(0, Math.floor(to - from + 1));
     return this;
   }
-  async single(): Promise<SqlResult> { this.singleRow = true; return this.execute(); }
-  async maybeSingle(): Promise<SqlResult> { this.singleRow = true; this.maybe = true; return this.execute(); }
+  async single(): Promise<{ data: any; error: SqlResult["error"]; count: number | null }> { this.singleRow = true; return this.execute() as any; }
+  async maybeSingle(): Promise<{ data: any; error: SqlResult["error"]; count: number | null }> { this.singleRow = true; this.maybe = true; return this.execute() as any; }
   then<TResult1 = SqlResult, TResult2 = never>(
     onfulfilled?: ((value: SqlResult) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
@@ -250,7 +250,7 @@ export class PgQueryBuilder implements PromiseLike<SqlResult> {
         if (results.rows.length !== 1 && !(this.maybe && results.rows.length === 0)) {
           return {data:null,error:{code:"PGRST116",message:"Resposta não possui exatamente uma linha."},count};
         }
-        return {data:results.rows[0] || null,error:null,count};
+        return {data:(results.rows[0] || null) as any,error:null,count};
       }
       return {data,error:null,count};
     } catch(error) {
