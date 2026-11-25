@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { authorizedQueueRequest } from "@/lib/auth/queue";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { processJob } from "@/lib/automation";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!authorizedQueueRequest(request)) return NextResponse.json({ ok: false, error: "Não autorizado." }, { status: 401 });
   try {
     const supabase = getSupabaseAdmin();
     const now = new Date().toISOString();
