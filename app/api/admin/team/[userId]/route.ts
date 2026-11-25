@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseSession } from "@/lib/supabase/session";
-import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { removeCollaborator } from "@/lib/auth/users";
 import { requireSuperAdmin, type PermissionKey } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
@@ -112,9 +112,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { userId: 
       );
     }
 
-    const admin = getSupabaseAdmin();
-    const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
-    if (deleteError) throw deleteError;
+    await removeCollaborator(userId);
 
     return NextResponse.json({
       ok: true,
