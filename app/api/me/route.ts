@@ -76,7 +76,7 @@ export async function GET() {
     });
   } catch (error) {
     return NextResponse.json(
-      { ok: false, error: "Falha ao consultar a conta no Supabase.", detail: errorMessage(error) },
+      { ok: false, error: "Falha ao consultar a conta no PostgreSQL.", detail: errorMessage(error) },
       { status: 500 },
     );
   }
