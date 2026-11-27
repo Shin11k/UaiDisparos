@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "uai-disparos-teste",
+  "account_id": "cc0e0dfa790748f45c047138c9fb7da3",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-11",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vpc_services": [
+    {
+      "binding": "UAI_SQL_GATEWAY",
+      "service_id": "01a21976-f0d3-7f92-b92e-c47b10d81a84",
+      "remote": true
+    }
+  ]
+}
