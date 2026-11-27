@@ -154,6 +154,17 @@ export async function processJob(jobId: string) {
     return { ok: false, error: "Dados incompletos do job" };
   }
 
+  // Captured contacts from the September backup have unknown consent.
+  // Do not send direct outreach until consent is recorded explicitly.
+  if (!["opted_in", "manual_authorized"].includes(String(lead.consent_status))) {
+    await supabase.from("jobs").update({
+      status: "paused",
+      error_message: "Destinatário sem autorização registrada",
+      updated_at: new Date().toISOString(),
+    }).eq("id", job.id);
+    return { ok: false, paused: true, reason: "consent_required" };
+  }
+
   if (!automation.active || !automation.authorization_confirmed) {
     await supabase.from("jobs").update({ status: "paused", error_message: "Automação inativa ou sem confirmação de autorização", updated_at: new Date().toISOString() }).eq("id", job.id);
     return { ok: false, paused: true };
