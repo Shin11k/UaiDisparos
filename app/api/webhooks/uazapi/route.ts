@@ -35,10 +35,9 @@ export async function POST(req: NextRequest) {
   if (!payload) return NextResponse.json({ ok: false, error: "invalid_json" }, { status: 400 });
 
   const secret = process.env.UAZAPI_WEBHOOK_SECRET;
-  if (secret) {
-    const provided = req.headers.get("x-webhook-secret");
-    if (provided !== secret) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-  }
+  if (!secret || secret.length < 32) return NextResponse.json({ ok: false, error: "Webhook indisponível." }, { status: 503 });
+  const provided = req.headers.get("x-webhook-secret");
+  if (provided !== secret) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
 
   const provider = new UazapiProvider({ baseUrl: "", token: "" });
   const normalized = provider.normalizeWebhook(payload);
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest) {
     if (payloadToken) {
       const { data, error } = await supabase
         .from("instances")
-        .select("id,name,instance_role")
+        .select("id,name,instance_role,account_id")
         .eq("api_token", payloadToken)
         .maybeSingle();
       if (error) throw error;
@@ -69,12 +68,19 @@ export async function POST(req: NextRequest) {
       instance = data;
     }
 
+    // A relação com a conta precisa ser determinada pela instância autenticada.
+    // Não aceitar eventos desconhecidos no banco multitenant.
+    if (!instance?.id || !instance?.account_id) {
+      return NextResponse.json({ ok: true, ignored: true, reason: "unknown_instance" });
+    }
+
     const safePayload = sanitizePayload(payload);
 
     const { data: evt, error: evtErr } = await supabase
       .from("webhook_events")
       .insert({
-        instance_id: instance?.id ?? null,
+        instance_id: instance.id,
+        account_id: instance.account_id,
         provider: "uazapi",
         event_type: normalized.type,
         group_external_id: normalized.groupId ?? null,
@@ -178,6 +184,7 @@ export async function POST(req: NextRequest) {
       leadId = existingLead.id;
     } else {
       const insertPayload = {
+        account_id: instance.account_id,
         instance_id: instance.id,
         group_id: group.id,
         external_participant_id: normalized.participantId,
