@@ -38,6 +38,24 @@ function requestIdentity(): { accountId: string; role: string } {
   return { accountId, role: role || "client" };
 }
 
+const JSONB_COLUMNS: Record<string, Set<string>> = {
+  campaigns: new Set(["buttons", "target_rule"]),
+  groups: new Set(["metadata"]),
+  leads: new Set(["metadata"]),
+  jobs: new Set(["payload"]),
+  webhook_events: new Set(["payload"]),
+  notification_outbox: new Set(["payload"]),
+  group_addition_jobs: new Set(["provider_response"]),
+  accounts: new Set(["permissions"]),
+  profiles: new Set(["permissions"]),
+};
+function forDatabase(table: string, column: string, value: unknown): unknown {
+  if (value !== null && typeof value === "object" && JSONB_COLUMNS[table]?.has(column)) {
+    return JSON.stringify(value);
+  }
+  return value;
+}
+
 function sqlError(error: unknown) {
   const value = error as { code?: string; message?: string };
   return { code: value?.code, message: value?.message || "Falha no banco de dados." };
@@ -216,7 +234,7 @@ export class PgQueryBuilder implements PromiseLike<SqlResult> {
         if (!cols.length || rows.some(row=>Object.keys(row).sort().join(",")!==cols.join(",")))
           throw new Error("Inserções em lote exigem as mesmas colunas.");
         const params: unknown[] = [];
-        const tuples = rows.map(row=>"(" + cols.map(c=>{params.push(row[c]);return "?";}).join(",") + ")");
+        const tuples = rows.map(row=>"(" + cols.map(c=>{params.push(forDatabase(this.table,c,row[c]));return "?";}).join(",") + ")");
         const list = cols.map(identifier).join(",");
         statement = "INSERT INTO " + table + " (" + list + ") VALUES " + tuples.join(",");
         if (this.action === "upsert") {
@@ -236,7 +254,7 @@ export class PgQueryBuilder implements PromiseLike<SqlResult> {
           throw new Error("Alteração de account_id bloqueada.");
         const cols = Object.keys(valuesToWrite).sort();
         if (!cols.length) throw new Error("UPDATE sem valores.");
-        values = cols.map(c=>valuesToWrite[c]);
+        values = cols.map(c=>forDatabase(this.table,c,valuesToWrite[c]));
         statement = "UPDATE " + table + " SET " + cols.map(c=>identifier(c)+" = ?").join(",") +
           w.clause + (this.returning ? " RETURNING "+projection : "");
         values.push(...w.values);
