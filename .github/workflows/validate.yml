@@ -19,5 +19,11 @@ jobs:
         run: npm install
       - name: Check private SQL gateway syntax
         run: node --check services/sql-gateway/server.mjs
-      - name: Build
-        run: npm run build
+      - name: Validate PowerShell installer syntax
+        shell: pwsh
+        run: |
+          $parseErrors = @()
+          [System.Management.Automation.Language.Parser]::ParseFile("scripts/FINALIZAR_UAI_TESTE.ps1", [ref]$null, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) { $parseErrors | Format-List; exit 1 }
+      - name: Build Cloudflare staging bundle
+        run: npm run cf:build
