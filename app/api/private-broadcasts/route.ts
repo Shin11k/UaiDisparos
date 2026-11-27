@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         .select("id,phone,name,group_id")
         .in("group_id", sourceGroupIds)
         .eq("account_id", accountId)
-        .eq("consent_status", "opt_in")
+        .in("consent_status", ["opted_in", "manual_authorized"])
         .not("phone", "is", null);
       authorizedLeads = data || [];
     }
