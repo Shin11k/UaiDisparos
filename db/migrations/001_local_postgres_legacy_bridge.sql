@@ -2,7 +2,7 @@
 -- Aplique SOMENTE no banco uaidisparos apos a restauração, nunca no banco postgres/NuCel/Matura.
 -- Não recria dados. Não altera registros de envio nem envia mensagens.
 BEGIN;
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- PostgreSQL 18 provides gen_random_uuid() natively; no extension privileges required.
 
 CREATE TABLE IF NOT EXISTS public.accounts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
